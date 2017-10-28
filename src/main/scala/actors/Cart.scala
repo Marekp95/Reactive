@@ -1,8 +1,9 @@
-package actors.v1
+package actors
 
 import akka.actor.{Actor, Props, Timers}
 import akka.event.LoggingReceive
 import events.CartEvents._
+import events.CustomerEvents.CartEmpty
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -24,15 +25,17 @@ class Cart[T] extends Actor with Timers {
       restartTimer()
       items.+=(item)
     case ItemRemoved(item: T) if !items.contains(item) =>
-      // log error or sth
+    // log error or sth
     case ItemRemoved(item: T) if items.size > 1 =>
       restartTimer()
       items.-=(item)
     case ItemRemoved(item: T) =>
       items.-=(item)
+      context.parent ! CartEmpty
       context become empty()
     case CartTimeExpired =>
       items.clear()
+      context.parent ! CartEmpty
       context become empty()
     case StartCheckout =>
       context.actorOf(Props[Checkout[T]])
@@ -42,6 +45,7 @@ class Cart[T] extends Actor with Timers {
   def inCheckout(): Receive = LoggingReceive {
     case CheckoutClosed =>
       items.clear()
+      context.parent ! CartEmpty
       context become empty()
     case CheckoutCanceled =>
       context become nonEmpty()

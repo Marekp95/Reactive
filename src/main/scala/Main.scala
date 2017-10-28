@@ -1,4 +1,4 @@
-import actors.v2.{Cart, Checkout}
+import actors.{Cart, Checkout}
 import akka.actor.{ActorSystem, Props}
 import events.CartEvents.{ItemAdded, ItemRemoved, StartCheckout}
 import events.CheckoutEvents.{DeliveryMethodSelected, PaymentReceived, PaymentSelected}

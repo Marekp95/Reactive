@@ -1,9 +1,10 @@
-package actors.v1
+package actors
 
-import akka.actor.{Actor, PoisonPill, Timers}
+import akka.actor.{Actor, PoisonPill, Props, Timers}
 import akka.event.LoggingReceive
 import events.CartEvents
 import events.CheckoutEvents._
+import events.CustomerEvents.PaymentServiceStarted
 
 import scala.concurrent.duration._
 
@@ -28,6 +29,8 @@ class Checkout[T] extends Actor with Timers {
       context.parent ! CartEvents.CheckoutClosed
       self ! PoisonPill
     case PaymentSelected =>
+      val paymentService = context.actorOf(Props[PaymentService])
+      sender ! PaymentServiceStarted(paymentService)
       context become processingPayment()
       restartPaymentTimer()
   }

@@ -1,6 +1,6 @@
 import actors.{Cart, Checkout}
 import akka.actor.{ActorSystem, Props}
-import events.CartEvents.{ItemAdded, ItemRemoved, StartCheckout}
+import events.CartEvents.{AddItem, RemoveItem, StartCheckout}
 import events.CheckoutEvents.{DeliveryMethodSelected, PaymentReceived, PaymentSelected}
 
 import scala.concurrent.Await
@@ -14,13 +14,13 @@ object Main {
     val cartActor = system.actorOf(Props[Cart[Int]])
     val checkoutActor = system.actorOf(Props[Checkout[Int]])
 
-    cartActor ! ItemAdded(7)
+    cartActor ! AddItem(7)
     Thread.sleep(1000)
-    cartActor ! ItemAdded(4)
-    cartActor ! ItemAdded(9)
-    cartActor ! ItemRemoved(9)
-    cartActor ! ItemRemoved(4)
-    cartActor ! ItemAdded(4)
+    cartActor ! AddItem(4)
+    cartActor ! AddItem(9)
+    cartActor ! RemoveItem(9)
+    cartActor ! RemoveItem(4)
+    cartActor ! AddItem(4)
     cartActor ! StartCheckout
 
     checkoutActor ! DeliveryMethodSelected

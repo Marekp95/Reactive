@@ -3,58 +3,60 @@ package actors
 import akka.actor.{Actor, Props, Timers}
 import akka.event.LoggingReceive
 import events.CartEvents._
-import events.CustomerEvents.CartEmpty
+import events.CustomerEvents.{CartEmpty, CheckOutStarted}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 
 class Cart[T] extends Actor with Timers {
-  private val items = mutable.HashSet[T]()
+  val items: mutable.HashSet[T] = mutable.HashSet[T]()
 
   override def receive: Receive = empty()
 
   def empty(): Receive = LoggingReceive {
-    case ItemAdded(item: T) =>
+    case AddItem(item: T) =>
       items.+=(item)
       context become nonEmpty()
       restartTimer()
   }
 
   def nonEmpty(): Receive = LoggingReceive {
-    case ItemAdded(item: T) =>
+    case AddItem(item: T) =>
       restartTimer()
       items.+=(item)
-    case ItemRemoved(item: T) if !items.contains(item) =>
+    case RemoveItem(item: T) if !items.contains(item) =>
     // log error or sth
-    case ItemRemoved(item: T) if items.size > 1 =>
+    case RemoveItem(item: T) if items.size > 1 =>
       restartTimer()
       items.-=(item)
-    case ItemRemoved(item: T) =>
+    case RemoveItem(item: T) =>
       items.-=(item)
-      context.parent ! CartEmpty
+      context.parent ! CartEmpty()
       context become empty()
     case CartTimeExpired =>
       items.clear()
-      context.parent ! CartEmpty
+      context.parent ! CartEmpty()
       context become empty()
     case StartCheckout =>
-      context.actorOf(Props[Checkout[T]])
+      val checkoutActor = context.actorOf(Props[Checkout[T]])
+      sender ! CheckOutStarted(checkoutActor)
       context become inCheckout()
   }
 
   def inCheckout(): Receive = LoggingReceive {
     case CheckoutClosed =>
       items.clear()
-      context.parent ! CartEmpty
+      context.parent ! CartEmpty()
       context become empty()
     case CheckoutCanceled =>
+      context.parent ! CartEmpty()
       context become nonEmpty()
       restartTimer()
   }
 
   def restartTimer() {
     timers.cancelAll()
-    timers.startSingleTimer(CartExpirationKey, CartTimeExpired, 100.millis)
+    timers.startSingleTimer(CartExpirationKey, CartTimeExpired, 1.seconds)
   }
 }
 

@@ -10,6 +10,6 @@ object CustomerEvents {
 
   case class CheckOutStarted(checkoutActor: ActorRef) extends Event
 
-  case object CartEmpty extends Event
+  case class CartEmpty() extends Event
 
 }

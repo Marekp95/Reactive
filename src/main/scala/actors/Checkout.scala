@@ -20,13 +20,13 @@ class Checkout[T] extends Actor with Timers {
       context become selectingPaymentMethod()
       restartCheckoutTimer()
     case CheckoutTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutClosed
+      context.parent ! CartEvents.CheckoutCanceled()
       self ! PoisonPill
   }
 
   def selectingPaymentMethod(): Receive = LoggingReceive {
     case CheckoutTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutClosed
+      context.parent ! CartEvents.CheckoutCanceled()
       self ! PoisonPill
     case PaymentSelected =>
       val paymentService = context.actorOf(Props[PaymentService])
@@ -37,10 +37,10 @@ class Checkout[T] extends Actor with Timers {
 
   def processingPayment(): Receive = LoggingReceive {
     case PaymentTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutCanceled
+      context.parent ! CartEvents.CheckoutCanceled()
       self ! PoisonPill
     case PaymentReceived =>
-      context.parent ! CartEvents.CheckoutClosed
+      context.parent ! CartEvents.CheckoutClosed()
       self ! PoisonPill
   }
 

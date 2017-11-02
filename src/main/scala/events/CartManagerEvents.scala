@@ -1,12 +1,14 @@
 package events
 
-object CartEvents {
+import actors.CartManager.Item
+
+object CartManagerEvents {
 
   sealed trait Event
 
-  case class AddItem[T](item: T) extends Event
+  case class AddItem(item: Item) extends Event
 
-  case class RemoveItem[T](item: T) extends Event
+  case class RemoveItem(item: Item) extends Event
 
   case class CartTimeExpired() extends Event
 

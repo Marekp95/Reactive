@@ -2,13 +2,13 @@ package actors
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
 import akka.event.LoggingReceive
-import events.CartEvents
+import events.CartManagerEvents
 import events.CheckoutEvents._
 import events.CustomerEvents.PaymentServiceStarted
 
 import scala.concurrent.duration._
 
-class Checkout[T] extends Actor with Timers {
+class Checkout extends Actor with Timers {
 
   override def receive: Receive = {
     restartCheckoutTimer()
@@ -20,13 +20,13 @@ class Checkout[T] extends Actor with Timers {
       context become selectingPaymentMethod()
       restartCheckoutTimer()
     case CheckoutTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutCanceled()
+      context.parent ! CartManagerEvents.CheckoutCanceled()
       self ! PoisonPill
   }
 
   def selectingPaymentMethod(): Receive = LoggingReceive {
     case CheckoutTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutCanceled()
+      context.parent ! CartManagerEvents.CheckoutCanceled()
       self ! PoisonPill
     case PaymentSelected =>
       val paymentService = context.actorOf(Props[PaymentService])
@@ -37,10 +37,10 @@ class Checkout[T] extends Actor with Timers {
 
   def processingPayment(): Receive = LoggingReceive {
     case PaymentTimeExpired | Cancelled =>
-      context.parent ! CartEvents.CheckoutCanceled()
+      context.parent ! CartManagerEvents.CheckoutCanceled()
       self ! PoisonPill
     case PaymentReceived =>
-      context.parent ! CartEvents.CheckoutClosed()
+      context.parent ! CartManagerEvents.CheckoutClosed()
       self ! PoisonPill
   }
 
@@ -56,5 +56,5 @@ class Checkout[T] extends Actor with Timers {
 }
 
 object Checkout {
-  def apply: Cart[Int] = new Cart()
+  def apply: CartManager = new CartManager()
 }

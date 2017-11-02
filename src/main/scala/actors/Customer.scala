@@ -2,7 +2,7 @@ package actors
 
 import akka.actor.{Actor, Timers}
 import akka.event.LoggingReceive
-import events.CartEvents.CheckoutClosed
+import events.CartManagerEvents.CheckoutClosed
 import events.CheckoutEvents.{DeliveryMethodSelected, PaymentSelected}
 import events.CustomerEvents.{CartEmpty, CheckOutStarted, PaymentServiceStarted}
 import events.PaymentServiceEvents.{DoPayment, PaymentConfirmed}

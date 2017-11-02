@@ -1,6 +1,6 @@
 package actors
 
-import _root_.events.CartEvents.{CheckoutCanceled, CheckoutClosed}
+import _root_.events.CartManagerEvents.{CheckoutCanceled, CheckoutClosed}
 import _root_.events.CheckoutEvents.{DeliveryMethodSelected, PaymentReceived, PaymentSelected}
 import _root_.events.CustomerEvents.PaymentServiceStarted
 import akka.actor.{Actor, ActorSystem, Props}
@@ -20,7 +20,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
     "close checkout" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout[Int]])
+        private val checkoutActor = context.actorOf(Props[Checkout])
 
         def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
@@ -37,7 +37,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
     "terminate checkout after payment method selection timeout" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout[Int]])
+        private val checkoutActor = context.actorOf(Props[Checkout])
 
         def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
@@ -51,7 +51,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
     "terminate checkout after delivery method selection timeout" in {
       val proxy = TestProbe()
       system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout[Int]])
+        private val checkoutActor = context.actorOf(Props[Checkout])
 
         def receive = {
           case x if sender == checkoutActor => proxy.ref forward x

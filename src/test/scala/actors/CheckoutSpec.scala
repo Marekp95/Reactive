@@ -1,20 +1,14 @@
 package actors
 
-import _root_.events.CartManagerEvents.{CheckoutCanceled, CheckoutClosed}
-import _root_.events.CheckoutEvents.{DeliveryMethodSelected, PaymentReceived, PaymentSelected}
-import _root_.events.CustomerEvents.PaymentServiceStarted
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import org.scalatest._
+import _root_.messages.CartManagerMessages.{CheckoutCanceled, CheckoutClosed}
+import _root_.messages.CheckoutMessages.{DeliveryMethodSelected, PaymentReceived, PaymentSelected}
+import _root_.messages.CustomerMessages.PaymentServiceStarted
+import akka.actor.{Actor, Props}
+import akka.testkit.TestProbe
 
 import scala.concurrent.duration._
 
-class CheckoutSpec extends TestKit(ActorSystem())
-  with WordSpecLike with BeforeAndAfterAll with ImplicitSender with Matchers {
-
-  override def afterAll(): Unit = {
-    system.terminate
-  }
+class CheckoutSpec extends CommonSpec {
 
   "Checkout actor" must {
     "close checkout" in {
@@ -22,7 +16,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
       val parent = system.actorOf(Props(new Actor {
         private val checkoutActor = context.actorOf(Props[Checkout])
 
-        def receive = {
+        override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
           case x => checkoutActor forward x
         }
@@ -31,7 +25,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
       proxy.send(parent, PaymentSelected)
       proxy.expectMsgType[PaymentServiceStarted]
       proxy.send(parent, PaymentReceived)
-      proxy.expectMsgType[CheckoutClosed]
+      proxy.expectMsgType[CheckoutClosed](15.seconds)
     }
 
     "terminate checkout after payment method selection timeout" in {
@@ -39,7 +33,7 @@ class CheckoutSpec extends TestKit(ActorSystem())
       val parent = system.actorOf(Props(new Actor {
         private val checkoutActor = context.actorOf(Props[Checkout])
 
-        def receive = {
+        override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
           case x => checkoutActor forward x
         }
@@ -50,10 +44,10 @@ class CheckoutSpec extends TestKit(ActorSystem())
 
     "terminate checkout after delivery method selection timeout" in {
       val proxy = TestProbe()
-      system.actorOf(Props(new Actor {
+      val parent = system.actorOf(Props(new Actor {
         private val checkoutActor = context.actorOf(Props[Checkout])
 
-        def receive = {
+        override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
           case x => checkoutActor forward x
         }

@@ -2,48 +2,43 @@ package actors
 
 import java.net.URI
 
-import _root_.events.CartManagerEvents.{AddItem, RemoveItem, StartCheckout}
-import _root_.events.CustomerEvents.{CartEmpty, CheckOutStarted}
-import actors.CartManager.Item
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
-import org.scalatest._
+import actors.CartManager.{Cart, Item}
+import akka.actor.{Actor, PoisonPill, Props}
+import akka.testkit.{TestActorRef, TestProbe}
+import messages.CartManagerMessages.{AddItem, RemoveItem, StartCheckout}
+import messages.CustomerMessages.{CartEmpty, CheckOutStarted}
 
 import scala.concurrent.duration._
 
-class CartManagerSpec extends TestKit(ActorSystem())
-  with WordSpecLike with BeforeAndAfterAll with ImplicitSender with Matchers {
-
-  override def afterAll(): Unit = {
-    system.terminate
-  }
+class CartManagerSpec extends CommonSpec {
 
   "Cart actor" must {
     "initial state" in {
       val cartActor = TestActorRef[CartManager]
       assert(cartActor.underlyingActor.shoppingCart.getItems.isEmpty)
+      cartActor ! PoisonPill
     }
 
     "add Item" in {
-      val cartActor = TestActorRef[CartManager]
-      cartActor ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
-      assert(cartActor.underlyingActor.shoppingCart.getItems.size == 1)
+      var cart = Cart.empty
+      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      assert(cart.getItems.size == 1)
     }
 
     "remove not present item" in {
-      val cartActor = TestActorRef[CartManager]
-      cartActor ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
-      assert(cartActor.underlyingActor.shoppingCart.getItems.size == 1)
-      cartActor ! RemoveItem(Item(new URI("13"), "13", BigDecimal(1.0), 1))
-      assert(cartActor.underlyingActor.shoppingCart.getItems.size == 1)
+      var cart = Cart.empty
+      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      assert(cart.getItems.size == 1)
+      cart = cart.removeItem(Item(new URI("13"), "13", BigDecimal(1.0), 1), 1)
+      assert(cart.getItems.size == 1)
     }
 
     "remove item" in {
-      val cartActor = TestActorRef[CartManager]
-      cartActor ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
-      assert(cartActor.underlyingActor.shoppingCart.getItems.size == 1)
-      cartActor ! RemoveItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
-      assert(cartActor.underlyingActor.shoppingCart.getItems.isEmpty)
+      var cart = Cart.empty
+      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      assert(cart.getItems.size == 1)
+      cart = cart.removeItem(Item(new URI("7"), "7", BigDecimal(1.0), 1), 1)
+      assert(cart.getItems.isEmpty)
     }
 
     "checkout started response" in {
@@ -51,7 +46,8 @@ class CartManagerSpec extends TestKit(ActorSystem())
       cartActor ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
       expectNoMessage(1.second)
       cartActor ! StartCheckout
-      expectMsgType[CheckOutStarted]
+      expectMsgType[CheckOutStarted](15.seconds)
+      cartActor ! PoisonPill
     }
 
     "cart expired" in {
@@ -59,7 +55,7 @@ class CartManagerSpec extends TestKit(ActorSystem())
       val parent = system.actorOf(Props(new Actor {
         private val cartActor = context.actorOf(Props[CartManager])
 
-        def receive = {
+        override def receive = {
           case x if sender == cartActor => proxy.ref forward x
           case x => cartActor forward x
         }
@@ -73,14 +69,14 @@ class CartManagerSpec extends TestKit(ActorSystem())
       val parent = system.actorOf(Props(new Actor {
         private val cartActor = context.actorOf(Props[CartManager])
 
-        def receive = {
+        override def receive = {
           case x if sender == cartActor => proxy.ref forward x
           case x => cartActor forward x
         }
       }))
       proxy.send(parent, AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1)))
       proxy.send(parent, RemoveItem(Item(new URI("7"), "7", BigDecimal(1.0), 1)))
-      proxy.expectMsgType[CartEmpty]
+      proxy.expectMsgType[CartEmpty](15.seconds)
     }
   }
 }

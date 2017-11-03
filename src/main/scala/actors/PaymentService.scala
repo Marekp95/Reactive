@@ -1,16 +1,23 @@
 package actors
 
-import akka.actor.{Actor, PoisonPill, Timers}
+import akka.actor.{PoisonPill, Timers}
 import akka.event.LoggingReceive
-import events.CheckoutEvents.PaymentReceived
-import events.PaymentServiceEvents.{DoPayment, PaymentConfirmed}
+import akka.persistence.PersistentActor
+import messages.CheckoutMessages.PaymentReceived
+import messages.PaymentServiceMessages.{DoPayment, PaymentConfirmed}
 
-class PaymentService extends Actor with Timers {
-  override def receive: Receive = LoggingReceive {
+class PaymentService extends PersistentActor with Timers {
+  override def persistenceId: String = "payment-service-007"
+
+  override def receiveCommand: Receive = LoggingReceive {
     case DoPayment =>
       sender ! PaymentConfirmed
       context.parent ! PaymentReceived
       self ! PoisonPill
+  }
+
+  override def receiveRecover: Receive = {
+    case _ =>
   }
 }
 

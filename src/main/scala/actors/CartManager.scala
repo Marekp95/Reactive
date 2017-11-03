@@ -2,68 +2,130 @@ package actors
 
 import java.net.URI
 
-import actors.CartManager.{Cart, Item}
-import akka.actor.{Actor, Props, Timers}
+import actors.CartManager._
+import akka.actor.{Props, Timers}
 import akka.event.LoggingReceive
-import events.CartManagerEvents._
-import events.CustomerEvents.{CartEmpty, CheckOutStarted}
+import akka.persistence.{PersistentActor, SnapshotOffer}
+import messages.CartManagerMessages._
+import messages.CustomerMessages.{CartEmpty, CheckOutStarted}
 
 import scala.collection.immutable.HashMap
 import scala.concurrent.duration._
 
-class CartManager(var shoppingCart: Cart) extends Actor with Timers {
-  def this() = this(Cart.empty)
+class CartManager(var shoppingCart: Cart, id: String) extends PersistentActor with Timers {
+  def this() = this(Cart.empty, System.currentTimeMillis().toString)
 
-  override def receive: Receive = empty()
+  def this(id: String) = this(Cart.empty, id)
+
+  override def persistenceId: String = "cart-manager-" + id
+
+  override def receive: Receive = receiveCommand
+
+  override def receiveCommand: Receive = empty()
 
   def empty(): Receive = LoggingReceive {
     case AddItem(item: Item) =>
-      shoppingCart = shoppingCart.addItem(item)
-      context become nonEmpty()
       restartTimer()
+      this.shoppingCart = shoppingCart.addItem(item)
+
+      persist(CartChangeEvent(AddItemAction(item), NonEmpty)) { _ =>
+        context become nonEmpty()
+      }
   }
 
   def nonEmpty(): Receive = LoggingReceive {
     case AddItem(item: Item) =>
       restartTimer()
-      shoppingCart = shoppingCart.addItem(item)
-      println(shoppingCart)
-    case RemoveItem(item: Item) if item.count > 1 =>
+      this.shoppingCart = shoppingCart.addItem(item)
+      persist(CartChangeEvent(AddItemAction(item), NonEmpty)) { _ =>
+      }
+    case RemoveItem(item: Item) if shoppingCart.getItems.size > 1 =>
       restartTimer()
-      shoppingCart = shoppingCart.removeItem(item, 1)
+      persist(CartChangeEvent(RemoveSingleItemAction(item), NonEmpty)) { _ =>
+        this.shoppingCart = shoppingCart.removeItem(item, 1)
+      }
     case RemoveItem(item: Item) =>
-      shoppingCart = shoppingCart.removeItem(item, 1)
+      this.shoppingCart = shoppingCart.removeItem(item, 1)
       context.parent ! CartEmpty()
       context become empty()
-    case CartTimeExpired =>
-      shoppingCart = shoppingCart.removeAllItems()
+      saveSnapshot(shoppingCart)
+    case CartTimeExpired() =>
+      this.shoppingCart = shoppingCart.removeAllItems()
       context.parent ! CartEmpty()
       context become empty()
+      saveSnapshot(shoppingCart)
     case StartCheckout =>
-      val checkoutActor = context.actorOf(Props[Checkout])
-      sender ! CheckOutStarted(checkoutActor)
-      context become inCheckout()
+      persist(CartChangeEvent(NewState(), InCheckout)) { _ =>
+        val checkoutActor = context.actorOf(Props[Checkout])
+        sender ! CheckOutStarted(checkoutActor)
+        context become inCheckout()
+      }
   }
 
   def inCheckout(): Receive = LoggingReceive {
     case CheckoutClosed =>
-      shoppingCart = shoppingCart.removeAllItems()
+      this.shoppingCart = shoppingCart.removeAllItems()
       context.parent ! CartEmpty()
       context become empty()
+      saveSnapshot(shoppingCart)
     case CheckoutCanceled =>
-      context.parent ! CartEmpty()
-      context become nonEmpty()
       restartTimer()
+      persist(CartChangeEvent(NewState(), NonEmpty)) { _ =>
+        context.parent ! CartEmpty()
+        context become nonEmpty()
+      }
   }
 
   def restartTimer() {
-    timers.cancelAll()
-    timers.startSingleTimer(CartExpirationKey, CartTimeExpired, 1.seconds)
+    persist(SetTimerEvent(System.currentTimeMillis(), CartTimeExpired())) { _ =>
+      timers.startSingleTimer(CartExpirationKey, CartTimeExpired(), 10.seconds)
+    }
+  }
+
+  override def receiveRecover: Receive = {
+    case CartChangeEvent(action, state) =>
+      action match {
+        case AddItemAction(item) => shoppingCart = shoppingCart.addItem(item)
+        case RemoveSingleItemAction(item) => shoppingCart = shoppingCart.removeItem(item, 1)
+      }
+      println(state)
+      setState(state)
+    case SnapshotOffer(_, snapshot: Cart) =>
+      shoppingCart = snapshot
+      setState(Empty)
+    case SetTimerEvent(_, message) =>
+      timers.startSingleTimer(CartExpirationKey, message, 10.seconds)
+  }
+
+  def setState(state: State): Unit = state match {
+    case Empty => context become empty()
+    case NonEmpty => context become nonEmpty()
+    case InCheckout => context become inCheckout()
   }
 }
 
 object CartManager {
-  def apply: CartManager = new CartManager()
+  def apply: CartManager = new CartManager(System.currentTimeMillis().toString)
+
+  sealed trait State
+
+  case object Empty extends State
+
+  case object NonEmpty extends State
+
+  case object InCheckout extends State
+
+  sealed trait Action
+
+  case class AddItemAction(item: Item) extends Action
+
+  case class RemoveSingleItemAction(item: Item) extends Action
+
+  case class NewState() extends Action
+
+  case class CartChangeEvent(action: Action, newState: State)
+
+  case class SetTimerEvent(time: Long, message: Message)
 
   case class Item(id: URI, name: String, price: BigDecimal, count: Int)
 
@@ -86,4 +148,5 @@ object CartManager {
   object Cart {
     val empty = Cart(Map.empty)
   }
+
 }

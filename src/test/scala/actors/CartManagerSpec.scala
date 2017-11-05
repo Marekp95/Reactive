@@ -53,7 +53,7 @@ class CartManagerSpec extends CommonSpec {
     "cart expired" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val cartActor = context.actorOf(Props[CartManager])
+        private val cartActor = context.actorOf(Props(new CartManager(System.currentTimeMillis().toString)))
 
         override def receive = {
           case x if sender == cartActor => proxy.ref forward x
@@ -67,7 +67,7 @@ class CartManagerSpec extends CommonSpec {
     "cart empty" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val cartActor = context.actorOf(Props[CartManager])
+        private val cartActor = context.actorOf(Props(new CartManager(System.currentTimeMillis().toString)))
 
         override def receive = {
           case x if sender == cartActor => proxy.ref forward x

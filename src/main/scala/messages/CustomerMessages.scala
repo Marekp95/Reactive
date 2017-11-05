@@ -12,4 +12,8 @@ object CustomerMessages {
 
   case class CartEmpty() extends Message
 
+  case object Start extends Message
+
+  case object Continue extends Message
+
 }

@@ -10,8 +10,8 @@ import messages.CustomerMessages.PaymentServiceStarted
 
 import scala.concurrent.duration._
 
-class Checkout(id: String) extends PersistentActor with Timers {
-  def this() = this(System.currentTimeMillis().toString)
+class Checkout(id: String = "007") extends PersistentActor with Timers {
+  def this() = this("007")
 
   override def persistenceId: String = "checkout-" + id
 
@@ -24,6 +24,7 @@ class Checkout(id: String) extends PersistentActor with Timers {
     case DeliveryMethodSelected =>
       context become selectingPaymentMethod()
       restartCheckoutTimer()
+      persist(CheckoutChangeEvent(SelectingPaymentMethod())) { _ => }
     case CheckoutTimeExpired | Cancelled =>
       context.parent ! CartManagerMessages.CheckoutCanceled()
       self ! PoisonPill
@@ -38,6 +39,7 @@ class Checkout(id: String) extends PersistentActor with Timers {
       sender ! PaymentServiceStarted(paymentService)
       context become processingPayment()
       restartPaymentTimer()
+      persist(CheckoutChangeEvent(ProcessingPayment())) { _ => }
   }
 
   def processingPayment(): Receive = LoggingReceive {
@@ -67,22 +69,22 @@ class Checkout(id: String) extends PersistentActor with Timers {
   }
 
   def setState(state: State): Unit = state match {
-    case SelectingDelivery => context become selectingDelivery()
-    case SelectingPaymentMethod => context become selectingPaymentMethod()
-    case ProcessingPayment => context become processingPayment()
+    case SelectingDelivery() => context become selectingDelivery()
+    case SelectingPaymentMethod() => context become selectingPaymentMethod()
+    case ProcessingPayment() => context become processingPayment()
   }
 }
 
 object Checkout {
-  def apply: Checkout = new Checkout(System.currentTimeMillis().toString)
+  def apply: Checkout = new Checkout()
 
   sealed trait State
 
-  case object SelectingDelivery extends State
+  case class SelectingDelivery() extends State
 
-  case object SelectingPaymentMethod extends State
+  case class SelectingPaymentMethod() extends State
 
-  case object ProcessingPayment extends State
+  case class ProcessingPayment() extends State
 
   case class CheckoutChangeEvent(newState: State)
 

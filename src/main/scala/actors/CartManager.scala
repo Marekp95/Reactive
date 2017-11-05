@@ -12,8 +12,8 @@ import messages.CustomerMessages.{CartEmpty, CheckOutStarted}
 import scala.collection.immutable.HashMap
 import scala.concurrent.duration._
 
-class CartManager(var shoppingCart: Cart, id: String) extends PersistentActor with Timers {
-  def this() = this(Cart.empty, System.currentTimeMillis().toString)
+class CartManager(var shoppingCart: Cart, id: String = "007") extends PersistentActor with Timers {
+  def this() = this(Cart.empty)
 
   def this(id: String) = this(Cart.empty, id)
 
@@ -87,6 +87,7 @@ class CartManager(var shoppingCart: Cart, id: String) extends PersistentActor wi
       action match {
         case AddItemAction(item) => shoppingCart = shoppingCart.addItem(item)
         case RemoveSingleItemAction(item) => shoppingCart = shoppingCart.removeItem(item, 1)
+        case _ =>
       }
       println(state)
       setState(state)
@@ -100,12 +101,14 @@ class CartManager(var shoppingCart: Cart, id: String) extends PersistentActor wi
   def setState(state: State): Unit = state match {
     case Empty => context become empty()
     case NonEmpty => context become nonEmpty()
-    case InCheckout => context become inCheckout()
+    case InCheckout =>
+      context.actorOf(Props[Checkout])
+      context become inCheckout()
   }
 }
 
 object CartManager {
-  def apply: CartManager = new CartManager(System.currentTimeMillis().toString)
+  def apply: CartManager = new CartManager()
 
   sealed trait State
 

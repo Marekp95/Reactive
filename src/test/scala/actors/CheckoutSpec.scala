@@ -14,7 +14,7 @@ class CheckoutSpec extends CommonSpec {
     "close checkout" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout])
+        private val checkoutActor = context.actorOf(Props(new Checkout(System.currentTimeMillis().toString)))
 
         override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
@@ -31,7 +31,7 @@ class CheckoutSpec extends CommonSpec {
     "terminate checkout after payment method selection timeout" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout])
+        private val checkoutActor = context.actorOf(Props(new Checkout(System.currentTimeMillis().toString)))
 
         override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x
@@ -45,7 +45,7 @@ class CheckoutSpec extends CommonSpec {
     "terminate checkout after delivery method selection timeout" in {
       val proxy = TestProbe()
       val parent = system.actorOf(Props(new Actor {
-        private val checkoutActor = context.actorOf(Props[Checkout])
+        private val checkoutActor = context.actorOf(Props(new Checkout(System.currentTimeMillis().toString)))
 
         override def receive = {
           case x if sender == checkoutActor => proxy.ref forward x

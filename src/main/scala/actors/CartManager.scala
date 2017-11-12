@@ -63,12 +63,12 @@ class CartManager(var shoppingCart: Cart, id: String = "007") extends Persistent
   }
 
   def inCheckout(): Receive = LoggingReceive {
-    case CheckoutClosed =>
+    case CheckoutClosed() =>
       this.shoppingCart = shoppingCart.removeAllItems()
       context.parent ! CartEmpty()
       context become empty()
       saveSnapshot(shoppingCart)
-    case CheckoutCanceled =>
+    case CheckoutCanceled() =>
       restartTimer()
       persist(CartChangeEvent(NewState(), NonEmpty)) { _ =>
         context.parent ! CartEmpty()
@@ -94,8 +94,10 @@ class CartManager(var shoppingCart: Cart, id: String = "007") extends Persistent
     case SnapshotOffer(_, snapshot: Cart) =>
       shoppingCart = snapshot
       setState(Empty)
-    case SetTimerEvent(_, message) =>
-      timers.startSingleTimer(CartExpirationKey, message, 10.seconds)
+    case SetTimerEvent(time, message) =>
+      val currentTime = System.currentTimeMillis()
+      val delay = Math.max(1000, time + 10000 - currentTime)
+      timers.startSingleTimer(CartExpirationKey, message, delay.millis)
   }
 
   def setState(state: State): Unit = state match {
@@ -151,5 +153,4 @@ object CartManager {
   object Cart {
     val empty = Cart(Map.empty)
   }
-
 }

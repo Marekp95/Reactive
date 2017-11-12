@@ -19,12 +19,12 @@ class Customer extends Actor with Timers {
       cartManager ! AddItem(Item(new URI("13"), "13", BigDecimal(1.0), 1))
       cartManager ! RemoveItem(Item(new URI("11"), "11", BigDecimal(1.0), 1))
       cartManager ! StartCheckout
-    case CartEmpty =>
+    case CartEmpty() =>
     case CheckOutStarted(checkoutActor) =>
       checkoutActor ! DeliveryMethodSelected
 //      System.exit(0)
       checkoutActor ! PaymentSelected
-    case CheckoutClosed =>
+    case CheckoutClosed() =>
     case PaymentServiceStarted(paymentService) =>
       paymentService ! DoPayment
     case PaymentConfirmed =>

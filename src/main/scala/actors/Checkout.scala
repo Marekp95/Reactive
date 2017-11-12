@@ -52,20 +52,23 @@ class Checkout(id: String = "007") extends PersistentActor with Timers {
   }
 
   def restartCheckoutTimer() {
-    persist(SetTimerEvent(CheckoutTimerExpirationKey(), CheckoutTimeExpired())) { _ =>
+    persist(SetTimerEvent(System.currentTimeMillis(), CheckoutTimerExpirationKey(), CheckoutTimeExpired())) { _ =>
       timers.startSingleTimer(CheckoutTimerExpirationKey(), CheckoutTimeExpired(), 10.seconds)
     }
   }
 
   def restartPaymentTimer() {
-    persist(SetTimerEvent(PaymentTimerExpirationKey(), PaymentTimeExpired())) { _ =>
+    persist(SetTimerEvent(System.currentTimeMillis(), PaymentTimerExpirationKey(), PaymentTimeExpired())) { _ =>
       timers.startSingleTimer(PaymentTimerExpirationKey(), PaymentTimeExpired(), 10.seconds)
     }
   }
 
   override def receiveRecover: Receive = {
     case CheckoutChangeEvent(state) => setState(state)
-    case SetTimerEvent(key, message) => timers.startSingleTimer(key, message, 10.seconds)
+    case SetTimerEvent(time, key, message) =>
+      val currentTime = System.currentTimeMillis()
+      val delay = Math.max(1000, time + 10000 - currentTime)
+      timers.startSingleTimer(key, message, delay.millis)
   }
 
   def setState(state: State): Unit = state match {
@@ -88,6 +91,6 @@ object Checkout {
 
   case class CheckoutChangeEvent(newState: State)
 
-  case class SetTimerEvent(key: Key, message: Message)
+  case class SetTimerEvent(time: Long, key: Key, message: Message)
 
 }

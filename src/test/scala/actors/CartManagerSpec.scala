@@ -21,29 +21,29 @@ class CartManagerSpec extends CommonSpec {
 
     "add Item" in {
       var cart = Cart.empty
-      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      cart = cart.addItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)))
       assert(cart.getItems.size == 1)
     }
 
     "remove not present item" in {
       var cart = Cart.empty
-      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      cart = cart.addItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)))
       assert(cart.getItems.size == 1)
-      cart = cart.removeItem(Item(new URI("13"), "13", BigDecimal(1.0), 1), 1)
+      cart = cart.removeItem(Item(new URI("13"), "13", "", 1, BigDecimal(1.0)), 1)
       assert(cart.getItems.size == 1)
     }
 
     "remove item" in {
       var cart = Cart.empty
-      cart = cart.addItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      cart = cart.addItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)))
       assert(cart.getItems.size == 1)
-      cart = cart.removeItem(Item(new URI("7"), "7", BigDecimal(1.0), 1), 1)
+      cart = cart.removeItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)), 1)
       assert(cart.getItems.isEmpty)
     }
 
     "checkout started response" in {
       val cartActor = system.actorOf(Props[CartManager])
-      cartActor ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
+      cartActor ! AddItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)))
       expectNoMessage(1.second)
       cartActor ! StartCheckout
       expectMsgType[CheckOutStarted](15.seconds)
@@ -60,7 +60,7 @@ class CartManagerSpec extends CommonSpec {
           case x => cartActor forward x
         }
       }))
-      proxy.send(parent, AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1)))
+      proxy.send(parent, AddItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0))))
       proxy.expectMsgType[CartEmpty](15.seconds)
     }
 
@@ -74,8 +74,8 @@ class CartManagerSpec extends CommonSpec {
           case x => cartActor forward x
         }
       }))
-      proxy.send(parent, AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1)))
-      proxy.send(parent, RemoveItem(Item(new URI("7"), "7", BigDecimal(1.0), 1)))
+      proxy.send(parent, AddItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0))))
+      proxy.send(parent, RemoveItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0))))
       proxy.expectMsgType[CartEmpty](15.seconds)
     }
   }

@@ -132,7 +132,7 @@ object CartManager {
 
   case class SetTimerEvent(time: Long, message: Message)
 
-  case class Item(id: URI, name: String, price: BigDecimal, count: Int)
+  case class Item(id: URI, name: String, brand: String, count: Int, price: BigDecimal)
 
   case class Cart(items: Map[URI, Item]) {
     def addItem(it: Item): Cart = {

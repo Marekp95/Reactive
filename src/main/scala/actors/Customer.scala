@@ -14,10 +14,10 @@ class Customer extends Actor with Timers {
   override def receive: Receive = LoggingReceive {
     case Start =>
       val cartManager = context.actorOf(Props[CartManager])
-      cartManager ! AddItem(Item(new URI("7"), "7", BigDecimal(1.0), 1))
-      cartManager ! AddItem(Item(new URI("11"), "11", BigDecimal(1.0), 1))
-      cartManager ! AddItem(Item(new URI("13"), "13", BigDecimal(1.0), 1))
-      cartManager ! RemoveItem(Item(new URI("11"), "11", BigDecimal(1.0), 1))
+      cartManager ! AddItem(Item(new URI("7"), "7", "", 1, BigDecimal(1.0)))
+      cartManager ! AddItem(Item(new URI("11"), "11", "", 1, BigDecimal(1.0)))
+      cartManager ! AddItem(Item(new URI("13"), "13", "", 1, BigDecimal(1.0)))
+      cartManager ! RemoveItem(Item(new URI("11"), "11", "", 1, BigDecimal(1.0)))
       cartManager ! StartCheckout
     case CartEmpty() =>
     case CheckOutStarted(checkoutActor) =>

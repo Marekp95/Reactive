@@ -7,6 +7,7 @@ import akka.persistence.PersistentActor
 import messages.CartManagerMessages
 import messages.CheckoutMessages._
 import messages.CustomerMessages.PaymentServiceStarted
+import messages.PaymentServiceMessages.InvalidPayment
 
 import scala.concurrent.duration._
 
@@ -43,7 +44,7 @@ class Checkout(id: String = "007") extends PersistentActor with Timers {
   }
 
   def processingPayment(): Receive = LoggingReceive {
-    case PaymentTimeExpired | Cancelled =>
+    case PaymentTimeExpired | Cancelled | InvalidPayment =>
       context.parent ! CartManagerMessages.CheckoutCanceled()
       self ! PoisonPill
     case PaymentReceived =>

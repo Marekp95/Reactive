@@ -47,8 +47,6 @@ class PaymentServer extends Actor {
       throw BadGateway
     case HttpResponse(StatusCodes.ServiceUnavailable, _, _, _) =>
       throw ServiceUnavailable
-    case HttpResponse(_, _, _, _) =>
-      throw Exception
   }
 }
 

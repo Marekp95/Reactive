@@ -45,7 +45,8 @@ object ProductDatabase {
 
   def main(args: Array[String]): Unit = {
     val productDatabase = new ProductDatabase()
-
+    val t = System.currentTimeMillis()
     println(productDatabase.processRequest(List("Ale", "Bigfoot")))
+    println(System.currentTimeMillis() - t)
   }
 }

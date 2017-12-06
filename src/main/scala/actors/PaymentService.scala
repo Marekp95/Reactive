@@ -33,7 +33,7 @@ class PaymentService extends Actor with Timers {
       case InternalServerError => Restart
       case BadGateway => Restart
       case ServiceUnavailable => Restart
-      case Exception => Escalate
+      case _ => Escalate
     }
 }
 

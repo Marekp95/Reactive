@@ -2,15 +2,31 @@ package actors.remote
 
 import java.util.stream.IntStream
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorSystem, Props, Terminated}
 import akka.event.LoggingReceive
+import akka.routing.{ActorRefRoutee, RoundRobinRoutingLogic, Router}
 import database.ProductDatabase
 import messages.ProductCatalogMessages.{SearchQuery, SearchQueryResponse}
 
 class ProductCatalog(productDatabase: ProductDatabase) extends Actor {
+
+  var router = {
+    val routees = Vector.fill(5) {
+      val r = context.actorOf(Props(Worker(productDatabase)))
+      context watch r
+      ActorRefRoutee(r)
+    }
+    Router(RoundRobinRoutingLogic(), routees)
+  }
+
   override def receive: Receive = LoggingReceive {
     case SearchQuery(parameters) =>
-      context.actorOf(Props(Worker(productDatabase))).forward(SearchQuery(parameters))
+      router.route(SearchQuery(parameters), context.sender())
+    case Terminated(a) ⇒
+      router = router.removeRoutee(a)
+      val r = context.actorOf(Props(Worker(productDatabase)))
+      context watch r
+      router = router.addRoutee(r)
   }
 }
 
